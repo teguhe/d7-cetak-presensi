@@ -1,0 +1,144 @@
+unit umain;
+
+interface
+
+uses
+  Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
+  Dialogs, StdCtrls, Mask, JvExControls, JvComponent, JvArrowButton,
+  ComCtrls, Menus, inifiles;
+
+type
+  Tfmain = class(TForm)
+    RadioButton1: TRadioButton;
+    RadioButton2: TRadioButton;
+    Edit1: TEdit;
+    Label1: TLabel;
+    JvArrowButton1: TJvArrowButton;
+    MonthCalendar1: TMonthCalendar;
+    pm1: TPopupMenu;
+    PresensiEselon21: TMenuItem;
+    Presensilainnya1: TMenuItem;
+    N1: TMenuItem;
+    DesignReport1: TMenuItem;
+    PresensiStaf1: TMenuItem;
+    procedure RadioButton1Click(Sender: TObject);
+    procedure RadioButton2Click(Sender: TObject);
+    procedure FormCreate(Sender: TObject);
+    procedure PresensiEselon21Click(Sender: TObject);
+    procedure DesignReport1Click(Sender: TObject);
+    procedure Presensilainnya1Click(Sender: TObject);
+    procedure PresensiStaf1Click(Sender: TObject);
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+  end;
+
+var
+  fmain: Tfmain;
+
+implementation
+
+uses udm, ZConnection;
+
+{$R *.dfm}
+
+procedure Tfmain.RadioButton1Click(Sender: TObject);
+begin
+Edit1.Enabled:=false;
+end;
+
+procedure Tfmain.RadioButton2Click(Sender: TObject);
+begin
+Edit1.Enabled:=true;
+Edit1.SetFocus;
+end;
+
+procedure Tfmain.FormCreate(Sender: TObject);
+var
+ myini : TIniFile;
+ db_name,server_name,user_name,passwort,portz :string;
+begin
+ myini := TIniFile.Create(ExtractFilePath(Application.ExeName)+'assets/TConfig.ini');
+
+ server_name  := myini.ReadString('koneksi', 'nama', '');
+ db_name      := myini.ReadString('koneksi', 'Database', '');
+ user_name    := myini.ReadString('koneksi', 'user', '');
+ passwort     := myini.ReadString('koneksi', 'Password', '');
+ portz         := myini.ReadString('koneksi', 'port', '');
+
+ with dm.zc do begin
+  Protocol:='mysql';
+  HostName:=server_name;
+  Database:=db_name;
+  User:=user_name;
+  Password:=passwort;
+  Port:=StrToInt(portz);
+end;
+
+FMain.Caption:='Aplikasi Cetak Presensi Apel Pemkot Salatiga on '+server_name;
+
+ myini.Free;
+
+ try
+ dm.zc.Connected:=true;
+ except
+    begin
+        ShowMessage('Koneksi Gagal');
+        Exit;
+    end;
+    end;
+
+end;
+
+procedure Tfmain.PresensiEselon21Click(Sender: TObject);
+begin
+with dm do
+  begin
+    qcetak.Close;
+    qcetak.SQL.LoadFromFile(ExtractFilePath(Application.ExeName)+'assets/select_presensipns.sql');
+    qcetak.SQL.Add(' and A.I_06<30 order by A.I_06, namajabatan ');
+    qcetak.Open;
+  end;
+
+  //ShowMessage(IntToStr(dm.qcetak.RecordCount));
+  dm.fr.LoadFromFile(ExtractFilePath(Application.ExeName)+'assets/presensi_eselon2.fr3');
+  dm.fr.ShowReport();
+end;
+
+procedure Tfmain.DesignReport1Click(Sender: TObject);
+begin
+dm.fr.DesignReport();
+end;
+
+procedure Tfmain.Presensilainnya1Click(Sender: TObject);
+begin
+with dm do
+  begin
+    qcetak.Close;
+    qcetak.SQL.LoadFromFile(ExtractFilePath(Application.ExeName)+'assets/select_presensipns.sql');
+    qcetak.SQL.Add(' and (A.I_06>30 and A.I_06<60) or (A.I_06>60 and A.A_01=10) order by skpd,A.I_06, namajabatan ');
+    qcetak.Open;
+  end;
+
+  //ShowMessage(IntToStr(dm.qcetak.RecordCount));
+  dm.fr.LoadFromFile(ExtractFilePath(Application.ExeName)+'assets/presensi_lainnya.fr3');
+  dm.fr.ShowReport();
+end;
+
+procedure Tfmain.PresensiStaf1Click(Sender: TObject);
+begin
+with dm do
+  begin
+    qcetak.Close;
+    qcetak.SQL.LoadFromFile(ExtractFilePath(Application.ExeName)+'assets/select_presensipns.sql');
+    qcetak.SQL.Add(' and A.I_06=99 order by skpd,A.F_03 desc, A.f_tmt asc, nama ');
+    qcetak.Open;
+  end;
+
+  //ShowMessage(IntToStr(dm.qcetak.RecordCount));
+  dm.fr.LoadFromFile(ExtractFilePath(Application.ExeName)+'assets/presensi_lainnya.fr3');
+  dm.fr.ShowReport();
+end;
+
+end.
